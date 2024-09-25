@@ -1,0 +1,88 @@
+﻿<Window x:Class="HTTPCarManagerClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:HTTPCarManagerClient"
+        mc:Ignorable="d"
+    
+        Title="MainWindow" 
+        Height="500" 
+        Width="800" 
+        ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen"
+        Closing="WinExit">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="529*"/>
+            <ColumnDefinition Width="71*"/>
+            <ColumnDefinition Width="200*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Grid.ColumnSpan="2">
+
+            <TextBlock Text="C a r s" 
+                       FontSize="18"
+                       Margin="5 10 5 5"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontWeight="DemiBold"/>
+
+            <ListBox x:Name="CarsLB"
+                     Margin="20 5"
+                     Height="420"/>
+
+        </StackPanel>
+
+        <StackPanel Grid.Column="2">
+
+            <Button x:Name="GetBtn"
+                    Content="G E T"
+                    Click="GetBtnClick"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="10 100 10 10"
+                    Width="150"
+                    Height="40"
+                    FontSize="18"
+                    FontWeight="DemiBold"/>
+
+            <Button x:Name="PostBtn"
+                    Content="P O S T"
+                    Click="PostBtnClick"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="10 30 10 10"
+                    Width="150"
+                    Height="40"
+                    FontSize="18"
+                    FontWeight="DemiBold"/>
+
+            <Button x:Name="PutBtn"
+                    Content="P U T"
+                    Click="PutBtnClick"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="10 30 10 10"
+                    Width="150"
+                    Height="40"
+                    FontSize="18"
+                    FontWeight="DemiBold"/>
+
+            <Button x:Name="DeleteBtn"
+                    Content="D E L E T E"
+                    Click="DeleteBtnClick"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Margin="10 30 10 10"
+                    Width="150"
+                    Height="40"
+                    FontSize="18"
+                    FontWeight="DemiBold"/>
+
+
+        </StackPanel>
+
+    </Grid>
+</Window>
