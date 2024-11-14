@@ -11,7 +11,7 @@
         Width="800" 
         ResizeMode="CanMinimize"
         WindowStartupLocation="CenterScreen"
-        Closing="WinExit">
+        Closing="Window_Closing">
 
     <Grid>
         <Grid.ColumnDefinitions>

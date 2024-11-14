@@ -1,19 +1,15 @@
-﻿using HTTPCarManager.Models;
-using System.Windows;
+﻿using System.Windows;
 
 namespace HTTPCarManagerClient;
 
 public partial class CarDetailWindow : Window
 {
-	public Car NewCar { get; set; }
 	public MainWindow Main { get; set; }
 
 	public CarDetailWindow()
 	{
 		InitializeComponent();
 		DataContext = this;
-
-		NewCar = new();
 	}
 
 	public void SubmitBtnClick(object sender, RoutedEventArgs e)
@@ -34,8 +30,6 @@ public partial class CarDetailWindow : Window
 		int.TryParse(CarYearTB.Text, out int y);
 
 		Main.CurrentCar.ReleaseYear = y;
-
-		NewCar = null;
 
 		Close();
 	}

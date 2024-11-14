@@ -1,73 +1,94 @@
 ﻿using HTTPCarManager.Models;
 using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 
-List<Car> Cars = [
-new Car("320","BMW",2019,"Germany"),
-new Car("430","BMW",2021,"Italy"),
-new Car("540","BMW",2017,"France"),
-new Car("750","BMW",2023,"Spain")];
+List<Car> Cars = [];
 
-var ip = IPAddress.Loopback;
-var port = 27001;
-var listener = new TcpListener(ip, port);
+HttpListener listener = new();
+listener.Prefixes.Add("http://localhost:27001/");
 listener.Start();
+
+Cars.Add(new Car("Honda", "Insight", 2017, "Brown Doe"));
+Cars.Add(new Car("Honda", "Civic", 2018, "John Doe"));
+Cars.Add(new Car("Honda", "Accord", 2019, "John Smith"));
 
 Console.WriteLine("Server is listening...");
 
-while (true)
+try
 {
-	var client = listener.AcceptTcpClient();
-	var stream = client.GetStream();
-	var br = new BinaryReader(stream);
-	var bw = new BinaryWriter(stream);
-
-	try
+	while (true)
 	{
-		while (true)
+		string result = "";
+
+		HttpListenerContext context = listener.GetContext();
+		HttpListenerRequest request = context.Request;
+
+		string actionType = request.HttpMethod;
+
+		using (StreamReader reader = new StreamReader(request.InputStream, request.ContentEncoding))
 		{
-			var input = br.ReadString();
-			var command = JsonSerializer.Deserialize<HttpCommand>(input);
-			string result = "";
+			string content = reader.ReadToEnd();
+			Console.WriteLine($"\t\tContent Received.\n");
 
-			Console.WriteLine(command.Method);
-
-			switch (command.Method)
+			switch (actionType)
 			{
-				case HttpCommandMethods.GET:
+				case "GET":
 					result = JsonSerializer.Serialize(Cars);
+					Console.WriteLine($"\n\n\t{result}\n");
 					break;
-				case HttpCommandMethods.POST:
-					try {
-						Cars.Add(command.Value);
+				case "POST":
+					try
+					{
+						using JsonDocument jsonDoc = JsonDocument.Parse(content);
+
+						JsonSerializerOptions options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+						Car car = JsonSerializer.Deserialize<Car>(jsonDoc.RootElement, options);
+
+						Cars.Add(car!);
+
 						result = "Car adding sucess.";
 					}
-					catch (Exception) {
+					catch (Exception)
+					{
 						result = "Car adding failed.";
 					}
 					break;
-				case HttpCommandMethods.PUT:
+				case "PUT":
 					try
 					{
-						var c = Cars.FirstOrDefault(c => c.Id == command.Value.Id);
+						using JsonDocument jsonDoc = JsonDocument.Parse(content);
 
-						c.Vendor = command.Value.Vendor;
-						c.Model = command.Value.Model;
-						c.ReleaseYear = command.Value.ReleaseYear;
-						c.Owner = command.Value.Owner;
+						JsonSerializerOptions options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+						Car car = JsonSerializer.Deserialize<Car>(jsonDoc.RootElement, options);
+
+						var c = Cars.FirstOrDefault(c => c.Id == car!.Id);
+
+						c!.Vendor = car!.Vendor;
+						c.Model = car.Model;
+						c.ReleaseYear = car.ReleaseYear;
+						c.Owner = car.Owner;
 
 						result = "Car updating sucess.";
 					}
-					catch (Exception) {
+					catch (Exception)
+					{
 						result = "Car updating failed.";
 					}
 
 					break;
-				case HttpCommandMethods.DELETE:
+				case "DELETE":
 					try
 					{
-						Cars.RemoveAll(c => c.Id == command.Value.Id);
+						using JsonDocument jsonDoc = JsonDocument.Parse(content);
+
+						JsonSerializerOptions options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+						Car car = JsonSerializer.Deserialize<Car>(jsonDoc.RootElement, options);
+
+						Cars.RemoveAll(c => c.Id == car!.Id);
+
 						result = "Car deleting sucess.";
 					}
 					catch (Exception)
@@ -79,16 +100,18 @@ while (true)
 				default: break;
 			}
 
-			bw.Write(result);
-			bw.Flush();
+			StreamWriter w = new StreamWriter(context.Response.OutputStream);
+			w.Write(result);
+			w.Flush();
+			w.Close();
 		}
 	}
-	catch (IOException)
-	{
-		Console.WriteLine("\tClient disconnected.\n");
-	}
-	finally
-	{
-		client.Close();
-	}
+}
+catch (IOException)
+{
+	Console.WriteLine("\tClient disconnected.\n");
+}
+finally
+{
+	listener.Close();
 }

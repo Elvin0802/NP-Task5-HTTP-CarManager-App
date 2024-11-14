@@ -1,47 +1,33 @@
 ﻿using HTTPCarManager.Models;
-using System.IO;
-using System.Net.Sockets;
-using System.Net;
-using System.Windows;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
-using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace HTTPCarManagerClient;
 
 public partial class MainWindow : Window
 {
-	public IPAddress Ip { get; } = IPAddress.Loopback;
-	public int Port { get; } = 27001;
-	public TcpClient Client { get; set; }
-	public NetworkStream Stream { get; set; }
-	public BinaryReader BReader { get; set; }
-	public BinaryWriter BWriter { get; set; }
-	public HttpCommand? Command { get; set; }
-	public string? Responce { get; set; }
 	public Car? CurrentCar { get; set; }
+	public HttpClient? Client { get; set; }
+	public Uri? LocalUri { get; init; }
 
 	public MainWindow()
 	{
 		InitializeComponent();
 		DataContext = this;
 
-		Client = new();
-		Client.Connect(Ip, Port);
+		LocalUri = new Uri(@"http://localhost:27001/");
 
-		Stream = Client.GetStream();
-		BReader = new BinaryReader(Stream);
-		BWriter = new BinaryWriter(Stream);
-
-		Command = null;
-		Responce = null;
 		CurrentCar = null;
+		Client = new HttpClient();
 	}
 
 	public void GetBtnClick(object sender, RoutedEventArgs e)
 	{
 		try
 		{
-			GetProcess(null);
+			GetProcessAsync().Wait(5);
 		}
 		catch (Exception ex)
 		{
@@ -52,7 +38,7 @@ public partial class MainWindow : Window
 	{
 		try
 		{
-			PostProcess(null);
+			PostProcessAsync().Wait(5);
 		}
 		catch (Exception ex)
 		{
@@ -63,7 +49,7 @@ public partial class MainWindow : Window
 	{
 		try
 		{
-			PutProcess(null);
+			PutProcessAsync().Wait(5);
 		}
 		catch (Exception ex)
 		{
@@ -74,7 +60,7 @@ public partial class MainWindow : Window
 	{
 		try
 		{
-			DeleteProcess(null);
+			DeleteProcessAsync().Wait(5);
 		}
 		catch (Exception ex)
 		{
@@ -83,46 +69,56 @@ public partial class MainWindow : Window
 	}
 
 	public void ShowMessage(Exception ex) =>
-		MessageBox.Show($"Error occoured in {ex.Source}", "Server Result : Error", MessageBoxButton.OK, MessageBoxImage.Error);
+		MessageBox.Show($"Error occoured in {ex.Source}", "Server Result.", MessageBoxButton.OK, MessageBoxImage.Error);
 
-	public void GetProcess(HttpCommand command)
+	public async Task GetProcessAsync()
 	{
-		Command = new(HttpCommandMethods.GET);
+		var message = new HttpRequestMessage
+		{
+			Method = HttpMethod.Get,
+			RequestUri = LocalUri
+		};
 
-		BWriter.Write(JsonSerializer.Serialize(Command));
-		BWriter.Flush();
+		message.Headers.Add("Accept", "application/json");
 
-		Responce = BReader.ReadString();
+		var response = await Client!.SendAsync(message);
 
-		var l = JsonSerializer.Deserialize<List<Car>>(Responce);
+		var json = await response.Content.ReadAsStringAsync();
 
-		CarsLB.Items.Clear();
+		var l = JsonSerializer.Deserialize<List<Car>>(json);
 
-		foreach (var c in l)
-			CarsLB.Items.Add(c);
+		Dispatcher.Invoke(() =>
+		{
+			CarsLB.Items.Clear();
+
+			foreach (var c in l)
+				CarsLB.Items.Add(c);
+		});
 	}
 
-	public void PostProcess(HttpCommand command)
+	public async Task PostProcessAsync()
 	{
+		CurrentCar = new("", "", 0, "");
+
 		var win = new CarDetailWindow();
 
 		win.Main = this;
 
-		CurrentCar = new();
-
 		win.ShowDialog();
 
-		Command = new(HttpCommandMethods.POST, CurrentCar);
+		var content = JsonContent.Create(CurrentCar);
 
-		BWriter.Write(JsonSerializer.Serialize(Command));
-		BWriter.Flush();
+		var response = await Client!.PostAsync(LocalUri, content);
 
-		Responce = BReader.ReadString();
+		var result = await response.Content.ReadAsStringAsync();
 
-		MessageBox.Show(Responce, "Server Result : POST", MessageBoxButton.OK, MessageBoxImage.Information);
+		Dispatcher.Invoke(() =>
+		{
+			MessageBox.Show(result, "Server Result.", MessageBoxButton.OK, MessageBoxImage.Information);
+		});
 	}
 
-	public void PutProcess(HttpCommand command)
+	public async Task PutProcessAsync()
 	{
 		var win = new CarDetailWindow();
 
@@ -134,38 +130,46 @@ public partial class MainWindow : Window
 		win.CarOwnerTB.Text = CurrentCar.Owner;
 		win.CarVendorTB.Text = CurrentCar.Vendor;
 		win.CarYearTB.Text = CurrentCar.ReleaseYear.ToString();
-		
+
 		win.ShowDialog();
 
-		Command = new(HttpCommandMethods.PUT, CurrentCar);
+		var content = JsonContent.Create(CurrentCar);
 
-		BWriter.Write(JsonSerializer.Serialize(Command));
-		BWriter.Flush();
+		var response = await Client!.PutAsync(LocalUri, content);
 
-		Responce = BReader.ReadString();
+		var result = await response.Content.ReadAsStringAsync();
 
-		MessageBox.Show(Responce, "Server Result : POST", MessageBoxButton.OK, MessageBoxImage.Information);
+		Dispatcher.Invoke(() =>
+		{
+			MessageBox.Show(result, "Server Result.", MessageBoxButton.OK, MessageBoxImage.Information);
+		});
 	}
 
-	public void DeleteProcess(HttpCommand command)
+	public async Task DeleteProcessAsync()
 	{
 		CurrentCar = CarsLB.SelectedItem as Car;
 
-		Command = new(HttpCommandMethods.DELETE, CurrentCar!);
+		var message = new HttpRequestMessage
+		{
+			Method = HttpMethod.Delete,
+			RequestUri = LocalUri,
+			Content = JsonContent.Create(CurrentCar)
+		};
 
-		BWriter.Write(JsonSerializer.Serialize(Command));
-		BWriter.Flush();
+		message.Headers.Add("Delete", "application/json");
 
-		Responce = BReader.ReadString();
+		var response = await Client!.SendAsync(message);
 
-		MessageBox.Show(Responce, "Server Result : POST", MessageBoxButton.OK, MessageBoxImage.Information);
+		var result = await response.Content.ReadAsStringAsync();
+
+		Dispatcher.Invoke(() =>
+		{
+			MessageBox.Show(result, "Server Result.", MessageBoxButton.OK, MessageBoxImage.Information);
+		});
 	}
 
-	private void WinExit(object sender, System.ComponentModel.CancelEventArgs e)
+	private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
 	{
-		BReader.Close();
-		BWriter.Close();
-		Stream.Close();
-		Client.Close();
+		App.Current.Shutdown();
 	}
 }
